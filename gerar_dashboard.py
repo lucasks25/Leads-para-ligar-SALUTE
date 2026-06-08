@@ -295,12 +295,11 @@ HTML = f"""<!DOCTYPE html>
   .btn-save:hover {{ background: var(--blue-nav); }}
   .btn-export {{ background: #fff; border: 1.5px solid var(--blue-mist); color: var(--blue-nav); padding: 8px 14px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }}
   .btn-export:hover {{ border-color: var(--blue); background: var(--blue-soft); }}
-  .btn-crm {{ display: inline-flex; align-items: center; justify-content: center; background: #e2e8f0; color: #475569; border: none; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: background .15s; margin-left: 6px; }}
-  .btn-crm:hover {{ background: #cbd5e1; }}
+  .btn-crm {{ display: inline-flex; align-items: center; justify-content: center; background: transparent; color: #cbd5e1; border: 1px solid transparent; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: all .15s; margin-left: 6px; }}
+  .btn-crm:hover {{ background: #f8fafc; color: #64748b; border-color: #e2e8f0; }}
+  .btn-crm.has-notes {{ color: var(--blue); background: var(--blue-soft); }}
+  .btn-crm.has-notes:hover {{ background: #dbeafe; }}
   
-  .crm-tag {{ display: inline-block; padding: 3px 10px; border-radius: 5px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; margin-bottom: 4px; }}
-  .crm-fechou {{ background: #dcfce7; border: 1px solid #86efac; color: #166534; }}
-  .crm-recusou {{ background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }}
   .crm-nao_respondeu {{ background: #f3f4f6; border: 1px solid #d1d5db; color: #4b5563; }}
   .crm-em_negociacao {{ background: #fef08a; border: 1px solid #fde047; color: #854d0e; }}
   .crm-contatado {{ background: #e0e7ff; border: 1px solid #a5b4fc; color: #3730a3; }}
@@ -325,16 +324,40 @@ HTML = f"""<!DOCTYPE html>
     .bstat {{ flex: 1; }}
     .stats-grid {{ grid-template-columns: repeat(3, 1fr); }}
     .search-wrap {{ max-width: none; }}
-    td.hide-sm, th.hide-sm {{ display: none; }}
+  }}
+  @media (max-width: 768px) {{
+    .stats-grid {{ grid-template-columns: repeat(2, 1fr); }}
+    .toolbar {{ flex-direction: column; align-items: stretch; gap: 12px; }}
+    .toolbar-right {{ margin-left: 0; margin-top: 8px; }}
+    
+    .table-wrap {{ border: none; background: transparent; padding: 0; box-shadow: none; }}
+    table, thead, tbody, th, td, tr {{ display: block; }}
+    thead {{ display: none; }}
+    tr {{ margin-bottom: 16px; background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 16px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }}
+    td {{ border-bottom: none !important; padding: 0 !important; display: block; }}
+    
+    .td-idx {{ display: none; }}
+    .td-nome {{ padding-right: 80px !important; margin-bottom: 8px; }}
+    .td-nome .nome {{ font-size: 1.15rem; color: var(--text); }}
+    .td-nome .sub {{ display: none; }}
+    .td-curso {{ margin-bottom: 6px; }}
+    .td-tel {{ margin-bottom: 6px; font-size: 0.85rem; color: var(--text-2); font-weight: 500; }}
+    .td-tel::before {{ content: "📱 "; }}
+    .td-email {{ margin-bottom: 12px; font-size: 0.85rem; color: var(--text-2); word-break: break-all; }}
+    .td-email::before {{ content: "✉️ "; }}
+    .td-data {{ display: inline-block; font-size: 0.75rem; color: var(--text-3); background: #f1f5f9; padding: 4px 8px; border-radius: 6px; margin-bottom: 12px; }}
+    .td-etapa {{ display: block; border-top: 1.5px dashed var(--border); padding-top: 14px !important; margin-top: 4px; }}
+    .td-actions {{ position: absolute; top: 16px; right: 16px; margin: 0; }}
   }}
   @media (max-width: 600px) {{
     .header {{ padding: 0 16px; height: 54px; }}
     .logo-sub {{ display: none; }}
-    .header-right {{ gap: 16px; }}
-    .container {{ padding: 16px; }}
     .stats-grid {{ grid-template-columns: repeat(2, 1fr); }}
     .toolbar {{ flex-direction: column; align-items: stretch; }}
     .toolbar-right {{ margin-left: 0; }}
+  }}
+  @media (max-width: 480px) {{
+    .stats-grid {{ grid-template-columns: 1fr; }}
   }}
 </style>
 </head>
@@ -450,7 +473,8 @@ HTML += f"""    </select>
       <input type="date" id="dataFim" onchange="aplicarFiltros()" style="border:1.5px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;color:var(--text);font-family:inherit;">
     </div>
     <button class="btn-clear" onclick="limparFiltros()">Limpar filtros</button>
-    <button class="btn-export" onclick="exportarCRM()">📥 Exportar Backup CRM</button>
+    <button class="btn-export" onclick="document.getElementById('importCsv').click()">📤 Importar Leads (CSV)</button>
+    <input type="file" id="importCsv" accept=".csv" style="display:none" onchange="importarLeads(event)">
     <div class="toolbar-right">
       <div class="tcount"><b id="countNum">0</b> resultados</div>
     </div>
@@ -479,6 +503,11 @@ HTML += f"""    </select>
   </div>
 
   <div class="pagination" id="paginacao"></div>
+
+  <div style="text-align:center; padding: 40px 20px;">
+    <button class="btn-export" onclick="exportarCRM()" style="background:#fff;border:1.5px solid var(--border);color:var(--text-2);padding:10px 20px;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all .15s;">📥 Exportar Backup CRM e Leads Importados</button>
+    <p style="font-size:0.75rem;color:var(--text-3);margin-top:8px;">Exporte os dados para não perder seus leads ou anotações caso limpe o cache do navegador.</p>
+  </div>
 
   <div id="modalCRM" class="modal-overlay">
     <div class="modal">
@@ -513,12 +542,93 @@ const LEADS = {leads_json};
 const CORES = {cores_json};
 const POR_PAG = 50;
 let paginaAtual = 1;
-let leadsFiltrados = [...LEADS];
 
-// LocalStorage CRM
+// LocalStorage CRM e Leads Importados
 const CRM_KEY = 'salute_crm_leads';
 let CRM_DATA = JSON.parse(localStorage.getItem(CRM_KEY) || '{{}}');
+let IMPORTED_LEADS = JSON.parse(localStorage.getItem('salute_imported_leads') || '[]');
+
+let telefones_vistos = new Set(LEADS.map(l => l.tel_wa).filter(Boolean));
+let emails_vistos = new Set(LEADS.map(l => l.email).filter(Boolean));
+
+let leads_combinados = [...LEADS];
+IMPORTED_LEADS.forEach(l => {{
+  if (l.tel_wa && telefones_vistos.has(l.tel_wa)) return;
+  if (l.email && emails_vistos.has(l.email)) return;
+  leads_combinados.push(l);
+}});
+
+let leadsFiltrados = [...leads_combinados];
 let leadAtualId = null;
+
+function importarLeads(event) {{
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {{
+    const text = e.target.result;
+    const lines = text.split('\\n');
+    if (lines.length < 2) return alert("Arquivo inválido ou vazio!");
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    let colNome = -1, colTel = -1, colEmail = -1, colCurso = -1, colData = -1;
+    
+    headers.forEach((h, i) => {{
+      const lower = h.toLowerCase();
+      if (lower.includes('nome')) colNome = i;
+      else if (lower.includes('telefone') || lower.includes('celular') || lower.includes('whatsapp') || lower.includes('tel')) colTel = i;
+      else if (lower.includes('email') || lower.includes('e-mail')) colEmail = i;
+      else if (lower.includes('curso') || lower.includes('interesse')) colCurso = i;
+      else if (lower.includes('data') || lower.includes('criado') || lower.includes('cadastro')) colData = i;
+    }});
+
+    let importados_novos = 0;
+    
+    for (let i = 1; i < lines.length; i++) {{
+      const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/(^"|"$)/g, ''));
+      if (row.length < 2) continue;
+      
+      const nome = colNome >= 0 && row[colNome] ? row[colNome] : '';
+      const telefone = colTel >= 0 && row[colTel] ? row[colTel] : '';
+      const email = colEmail >= 0 && row[colEmail] ? row[colEmail] : '';
+      const curso = colCurso >= 0 && row[colCurso] ? row[colCurso] : 'Sem Curso';
+      const data_str = colData >= 0 && row[colData] ? row[colData].split(' ')[0] : '';
+      
+      const tel_wa = telefone.replace(/\\+/g, '').replace(/ /g, '').replace(/-/g, '');
+      const id = tel_wa || email || nome;
+      if (!id) continue;
+      
+      let data_iso = "";
+      if (data_str && data_str.includes('/')) {{
+        const partes = data_str.split('/');
+        if (partes.length === 3) data_iso = `${{partes[2]}}-${{partes[1]}}-${{partes[0]}}`;
+      }} else if (data_str && data_str.includes('-')) {{
+        data_iso = data_str;
+      }}
+      
+      if (tel_wa && telefones_vistos.has(tel_wa)) continue;
+      if (email && emails_vistos.has(email)) continue;
+      
+      const novoLead = {{
+        nome, email, telefone, tel_wa, curso,
+        data: data_str, data_iso, mes_ano: '', etapa: 'Not contacted'
+      }};
+      
+      IMPORTED_LEADS.push(novoLead);
+      leads_combinados.push(novoLead);
+      if (tel_wa) telefones_vistos.add(tel_wa);
+      if (email) emails_vistos.add(email);
+      importados_novos++;
+    }}
+    
+    localStorage.setItem('salute_imported_leads', JSON.stringify(IMPORTED_LEADS));
+    aplicarFiltros();
+    alert(`Importação concluída! ${{importados_novos}} novos leads adicionados.`);
+    event.target.value = '';
+  }};
+  reader.readAsText(file);
+}}
 
 function abrirModal(id, nome) {{
   leadAtualId = id;
@@ -557,7 +667,7 @@ function exportarCRM() {{
   let csvContent = "data:text/csv;charset=utf-8,";
   csvContent += "Nome,Telefone,Email,Curso,Data Cadastro,Status Original,Status CRM,Anotações CRM\\n";
   
-  LEADS.forEach(l => {{
+  leads_combinados.forEach(l => {{
     const id = l.tel_wa || l.email || l.nome;
     const crm = CRM_DATA[id];
     if (crm || l.etapa !== 'Not contacted') {{
@@ -616,11 +726,11 @@ function aplicarFiltros() {{
   const dataInicio = document.getElementById('dataInicio').value;
   const dataFim = document.getElementById('dataFim').value;
 
-  leadsFiltrados = LEADS.filter(l => {{
+  leadsFiltrados = leads_combinados.filter(l => {{
     if (curso && l.curso !== curso) return false;
     if (mes && l.mes_ano !== mes) return false;
-    if (dataInicio && l.data_iso.slice(0, 10) < dataInicio) return false;
-    if (dataFim && l.data_iso.slice(0, 10) > dataFim) return false;
+    if (dataInicio && (!l.data_iso || l.data_iso.slice(0, 10) < dataInicio)) return false;
+    if (dataFim && (!l.data_iso || l.data_iso.slice(0, 10) > dataFim)) return false;
     if (busca) {{
       const txt = (l.nome + l.email + l.telefone).toLowerCase();
       if (!txt.includes(busca)) return false;
@@ -678,27 +788,28 @@ function renderizar() {{
       const btnWa = l.tel_wa
         ? `<a class="btn-wa" href="https://wa.me/${{l.tel_wa}}" target="_blank" title="${{l.nome}}">${{WA_SVG}}</a>`
         : `<span class="btn-wa-off" title="Sem telefone">—</span>`;
-      const btnEdit = `<button class="btn-crm" onclick="abrirModal('${{id.replace(/'/g, "\\\\'")}}', '${{(l.nome||'').replace(/'/g, "\\\\'")}}')" title="Anotações CRM">${{EDIT_SVG}}</button>`;
+        
+      const btnCrmCls = (crm && (crm.status || crm.notas)) ? "btn-crm has-notes" : "btn-crm";
+      const btnEdit = `<button class="${{btnCrmCls}}" onclick="abrirModal('${{id.replace(/'/g, "\\\\'")}}', '${{(l.nome||'').replace(/'/g, "\\\\'")}}')" title="Anotações CRM">${{EDIT_SVG}}</button>`;
       
       return `<tr class="${{semCurso ? 'sem-curso' : ''}}">
-        <td class="idx">${{n}}</td>
-        <td>
+        <td class="td-idx idx">${{n}}</td>
+        <td class="td-nome">
           <div class="nome">${{l.nome || '—'}}</div>
-          <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${{l.email || ''}}</div>
+          <div class="sub">${{l.email || '—'}}</div>
         </td>
-        <td style="white-space:nowrap">
-          <span class="pill" style="background:${{hexToRgba(cor,0.08)}};color:${{cor}}">
-            <span class="pill-dot" style="background:${{cor}}"></span>${{l.curso}}
-          </span>
-        </td>
-        <td class="tel">${{l.telefone || '—'}}</td>
-        <td class="sub hide-sm">${{l.email || '—'}}</td>
-        <td class="date">${{l.data}}</td>
-        <td class="hide-sm">${{etapa}}</td>
-        <td style="display:flex;gap:4px;justify-content:flex-end">${{btnWa}}${{btnEdit}}</td>
+        <td class="td-curso"><span class="pill" style="background:${{hexToRgba(cor,0.08)}};color:${{cor}}"><span class="pill-dot" style="background:${{cor}}"></span>${{l.curso}}</span></td>
+        <td class="td-tel tel">${{l.telefone || '—'}}</td>
+        <td class="td-email sub">${{l.email || '—'}}</td>
+        <td class="td-data date">${{l.data}}</td>
+        <td class="td-etapa">${{etapa}}</td>
+        <td class="td-actions" style="display:flex;gap:4px;justify-content:flex-end">${{btnWa}}${{btnEdit}}</td>
       </tr>`;
     }}).join('');
   }}
+
+  renderPaginacao(total);
+}}
 
   renderPaginacao(total);
 }}
