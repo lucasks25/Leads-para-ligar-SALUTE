@@ -26,6 +26,7 @@ cursos_cor = {
 }
 
 todos_leads = []
+leads_vistos = set()
 
 for arquivo in glob.glob(os.path.join(PASTA_CURSOS, "*.csv")):
     nome_curso = os.path.splitext(os.path.basename(arquivo))[0]
@@ -35,6 +36,14 @@ for arquivo in glob.glob(os.path.join(PASTA_CURSOS, "*.csv")):
             telefone = row.get("Telefone", "").strip()
             # Formata telefone para WhatsApp (remove +, espaços)
             tel_wa = telefone.replace("+", "").replace(" ", "").replace("-", "")
+            email = row.get("Email", "").strip()
+            nome = row.get("Nome", "").strip()
+            
+            identificador = tel_wa or email or nome
+            if identificador and identificador in leads_vistos:
+                continue
+            if identificador:
+                leads_vistos.add(identificador)
             data_str = row.get("Data de Cadastro", "").strip()
             try:
                 data_obj = datetime.strptime(data_str, "%d/%m/%Y %H:%M")
@@ -271,6 +280,31 @@ HTML = f"""<!DOCTYPE html>
   .btn-wa svg {{ flex-shrink: 0; }}
   .btn-wa-off {{ display: inline-block; width: 32px; text-align: center; color: #c8d5ee; font-size: 0.9rem; }}
 
+  /* ── MODAL CRM ── */
+  .modal-overlay {{ position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,24,64,.5); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }}
+  .modal {{ background: var(--surface); width: 100%; max-width: 400px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,30,80,.15); padding: 24px; position: relative; }}
+  .modal h3 {{ font-size: 1.1rem; color: var(--text); margin-bottom: 6px; }}
+  .modal p.m-sub {{ font-size: 0.8rem; color: var(--text-3); margin-bottom: 20px; }}
+  .modal-close {{ position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.2rem; color: var(--text-3); cursor: pointer; }}
+  .form-group {{ margin-bottom: 16px; }}
+  .form-group label {{ display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }}
+  .form-group select, .form-group textarea {{ width: 100%; background: #f6f9ff; border: 1.5px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 0.85rem; outline: none; transition: border-color .15s; }}
+  .form-group select:focus, .form-group textarea:focus {{ border-color: var(--blue); background: #fff; }}
+  .form-group textarea {{ resize: vertical; min-height: 80px; }}
+  .btn-save {{ background: var(--blue); color: #fff; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background .15s; }}
+  .btn-save:hover {{ background: var(--blue-nav); }}
+  .btn-export {{ background: #fff; border: 1.5px solid var(--blue-mist); color: var(--blue-nav); padding: 8px 14px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }}
+  .btn-export:hover {{ border-color: var(--blue); background: var(--blue-soft); }}
+  .btn-crm {{ display: inline-flex; align-items: center; justify-content: center; background: #e2e8f0; color: #475569; border: none; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: background .15s; margin-left: 6px; }}
+  .btn-crm:hover {{ background: #cbd5e1; }}
+  
+  .crm-tag {{ display: inline-block; padding: 3px 10px; border-radius: 5px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; margin-bottom: 4px; }}
+  .crm-fechou {{ background: #dcfce7; border: 1px solid #86efac; color: #166534; }}
+  .crm-recusou {{ background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }}
+  .crm-nao_respondeu {{ background: #f3f4f6; border: 1px solid #d1d5db; color: #4b5563; }}
+  .crm-em_negociacao {{ background: #fef08a; border: 1px solid #fde047; color: #854d0e; }}
+  .crm-contatado {{ background: #e0e7ff; border: 1px solid #a5b4fc; color: #3730a3; }}
+
   /* ── EMPTY ── */
   .empty {{ text-align: center; padding: 60px 20px; color: var(--text-3); }}
   .empty p {{ font-size: 0.85rem; }}
@@ -410,6 +444,7 @@ for mes_ano, qtd in sorted(meses_lista, reverse=True):
 
 HTML += f"""    </select>
     <button class="btn-clear" onclick="limparFiltros()">Limpar filtros</button>
+    <button class="btn-export" onclick="exportarCRM()">📥 Exportar Backup CRM</button>
     <div class="toolbar-right">
       <div class="tcount"><b id="countNum">0</b> resultados</div>
     </div>
@@ -439,6 +474,32 @@ HTML += f"""    </select>
 
   <div class="pagination" id="paginacao"></div>
 
+  <div id="modalCRM" class="modal-overlay">
+    <div class="modal">
+      <button class="modal-close" onclick="fecharModal()">×</button>
+      <h3 id="modalNome">Nome do Lead</h3>
+      <p class="m-sub" id="modalIdentificador">Telefone/Email</p>
+      
+      <div class="form-group">
+        <label>Status da Negociação</label>
+        <select id="crmStatus">
+          <option value="">Apenas Contatado (Sem status)</option>
+          <option value="Em negociação">Em negociação</option>
+          <option value="Fechou">Fechou</option>
+          <option value="Recusou">Recusou</option>
+          <option value="Não Respondeu">Não Respondeu</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Anotações</label>
+        <textarea id="crmNotas" placeholder="Descreva como foi a conversa..."></textarea>
+      </div>
+      
+      <button class="btn-save" onclick="salvarCRM()">Salvar no Navegador</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -447,6 +508,73 @@ const CORES = {cores_json};
 const POR_PAG = 50;
 let paginaAtual = 1;
 let leadsFiltrados = [...LEADS];
+
+// LocalStorage CRM
+const CRM_KEY = 'salute_crm_leads';
+let CRM_DATA = JSON.parse(localStorage.getItem(CRM_KEY) || '{{}}');
+let leadAtualId = null;
+
+function abrirModal(id, nome) {{
+  leadAtualId = id;
+  document.getElementById('modalNome').textContent = nome || 'Lead';
+  document.getElementById('modalIdentificador').textContent = id;
+  
+  const data = CRM_DATA[id] || {{ status: '', notas: '' }};
+  document.getElementById('crmStatus').value = data.status || '';
+  document.getElementById('crmNotas').value = data.notas || '';
+  
+  document.getElementById('modalCRM').style.display = 'flex';
+}}
+
+function fecharModal() {{
+  document.getElementById('modalCRM').style.display = 'none';
+  leadAtualId = null;
+}}
+
+function salvarCRM() {{
+  if (!leadAtualId) return;
+  const status = document.getElementById('crmStatus').value;
+  const notas = document.getElementById('crmNotas').value;
+  
+  if (status || notas) {{
+    CRM_DATA[leadAtualId] = {{ status, notas }};
+  }} else {{
+    delete CRM_DATA[leadAtualId];
+  }}
+  
+  localStorage.setItem(CRM_KEY, JSON.stringify(CRM_DATA));
+  fecharModal();
+  renderizar();
+}}
+
+function exportarCRM() {{
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "Nome,Telefone,Email,Curso,Data Cadastro,Status Original,Status CRM,Anotações CRM\\n";
+  
+  LEADS.forEach(l => {{
+    const id = l.tel_wa || l.email || l.nome;
+    const crm = CRM_DATA[id];
+    if (crm || l.etapa !== 'Not contacted') {{
+      const nome = `"${{l.nome || ''}}"`;
+      const tel = `"${{l.telefone || ''}}"`;
+      const email = `"${{l.email || ''}}"`;
+      const curso = `"${{l.curso || ''}}"`;
+      const data = `"${{l.data || ''}}"`;
+      const statusOrig = `"${{l.etapa}}"`;
+      const statusCrm = `"${{crm ? crm.status : ''}}"`;
+      const notas = `"${{(crm && crm.notas) ? crm.notas.replace(/"/g, '""') : ''}}"`;
+      csvContent += `${{nome}},${{tel}},${{email}},${{curso}},${{data}},${{statusOrig}},${{statusCrm}},${{notas}}\\n`;
+    }}
+  }});
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "crm_salute_backup.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}}
 
 function corCurso(curso) {{
   return CORES[curso] || '#6b7280';
@@ -511,13 +639,35 @@ function renderizar() {{
       const cor = corCurso(l.curso);
       const semCurso = l.curso === 'Sem Curso';
       const n = inicio + i + 1;
-      const etapa = l.etapa === 'Not contacted'
-        ? `<span class="tag-nc">Não contatado</span>`
-        : `<span class="tag-ok">${{l.etapa}}</span>`;
+      
+      const id = l.tel_wa || l.email || l.nome;
+      const crm = CRM_DATA[id];
+      
+      let etapa = '';
+      if (crm && (crm.status || crm.notas)) {{
+         let cls = 'crm-contatado';
+         let lbl = crm.status || 'Contatado';
+         if (crm.status === 'Fechou') cls = 'crm-fechou';
+         if (crm.status === 'Recusou') cls = 'crm-recusou';
+         if (crm.status === 'Não Respondeu') cls = 'crm-nao_respondeu';
+         if (crm.status === 'Em negociação') cls = 'crm-em_negociacao';
+         
+         etapa = `<div class="crm-tag ${{cls}}">${{lbl}}</div>`;
+         if (crm.notas) etapa += `<div style="font-size:0.65rem;color:#8494b0;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${{crm.notas.replace(/"/g, '&quot;')}}">${{crm.notas}}</div>`;
+      }} else {{
+         etapa = l.etapa === 'Not contacted'
+          ? `<span class="tag-nc">Não contatado</span>`
+          : `<span class="tag-ok">${{l.etapa}}</span>`;
+      }}
+      
       const WA_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>`;
+      const EDIT_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+
       const btnWa = l.tel_wa
         ? `<a class="btn-wa" href="https://wa.me/${{l.tel_wa}}" target="_blank" title="${{l.nome}}">${{WA_SVG}}</a>`
         : `<span class="btn-wa-off" title="Sem telefone">—</span>`;
+      const btnEdit = `<button class="btn-crm" onclick="abrirModal('${{id.replace(/'/g, "\\\\'")}}', '${{(l.nome||'').replace(/'/g, "\\\\'")}}')" title="Anotações CRM">${{EDIT_SVG}}</button>`;
+      
       return `<tr class="${{semCurso ? 'sem-curso' : ''}}">
         <td class="idx">${{n}}</td>
         <td>
@@ -533,7 +683,7 @@ function renderizar() {{
         <td class="sub hide-sm">${{l.email || '—'}}</td>
         <td class="date">${{l.data}}</td>
         <td class="hide-sm">${{etapa}}</td>
-        <td>${{btnWa}}</td>
+        <td style="display:flex;gap:4px;justify-content:flex-end">${{btnWa}}${{btnEdit}}</td>
       </tr>`;
     }}).join('');
   }}
