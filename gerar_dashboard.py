@@ -504,9 +504,8 @@ HTML += f"""    </select>
 
   <div class="pagination" id="paginacao"></div>
 
-  <div style="text-align:center; padding: 40px 20px;">
-    <button class="btn-export" onclick="exportarCRM()" style="background:#fff;border:1.5px solid var(--border);color:var(--text-2);padding:10px 20px;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all .15s;">📥 Exportar Backup CRM e Leads Importados</button>
-    <p style="font-size:0.75rem;color:var(--text-3);margin-top:8px;">Exporte os dados para não perder seus leads ou anotações caso limpe o cache do navegador.</p>
+  <div style="text-align:center; padding: 30px 20px 40px 20px; margin-top: 20px; border-top: 1px dashed var(--border);">
+    <button onclick="exportarCRM()" style="background:transparent;border:none;color:var(--text-3);font-size:0.75rem;cursor:pointer;transition:color .15s;" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-3)'">📥 Exportar Backup CRM e Leads Importados</button>
   </div>
 
   <div id="modalCRM" class="modal-overlay">
@@ -841,7 +840,7 @@ function irPagina(p) {{
 }}
 
 // Inicializa
-aplicarFiltros();
+limparFiltros();
 </script>
 </body>
 </html>"""
