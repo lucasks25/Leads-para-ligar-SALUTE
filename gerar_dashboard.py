@@ -443,6 +443,12 @@ for mes_ano, qtd in sorted(meses_lista, reverse=True):
         HTML += f'      <option value="{mes_ano}">{label}</option>\n'
 
 HTML += f"""    </select>
+    <div style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;margin-right:8px;">
+      <span style="font-size:0.8rem;color:var(--text-3);font-weight:500;">De</span>
+      <input type="date" id="dataInicio" onchange="aplicarFiltros()" style="border:1.5px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;color:var(--text);font-family:inherit;">
+      <span style="font-size:0.8rem;color:var(--text-3);font-weight:500;">Até</span>
+      <input type="date" id="dataFim" onchange="aplicarFiltros()" style="border:1.5px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;color:var(--text);font-family:inherit;">
+    </div>
     <button class="btn-clear" onclick="limparFiltros()">Limpar filtros</button>
     <button class="btn-export" onclick="exportarCRM()">📥 Exportar Backup CRM</button>
     <div class="toolbar-right">
@@ -598,6 +604,8 @@ function limparFiltros() {{
   document.getElementById('busca').value = '';
   document.getElementById('filtroCurso').value = '';
   document.getElementById('filtroMes').value = '';
+  document.getElementById('dataInicio').value = '';
+  document.getElementById('dataFim').value = '';
   aplicarFiltros();
 }}
 
@@ -605,10 +613,14 @@ function aplicarFiltros() {{
   const busca = document.getElementById('busca').value.toLowerCase();
   const curso = document.getElementById('filtroCurso').value;
   const mes = document.getElementById('filtroMes').value;
+  const dataInicio = document.getElementById('dataInicio').value;
+  const dataFim = document.getElementById('dataFim').value;
 
   leadsFiltrados = LEADS.filter(l => {{
     if (curso && l.curso !== curso) return false;
     if (mes && l.mes_ano !== mes) return false;
+    if (dataInicio && l.data_iso.slice(0, 10) < dataInicio) return false;
+    if (dataFim && l.data_iso.slice(0, 10) > dataFim) return false;
     if (busca) {{
       const txt = (l.nome + l.email + l.telefone).toLowerCase();
       if (!txt.includes(busca)) return false;
@@ -653,7 +665,7 @@ function renderizar() {{
          if (crm.status === 'Em negociação') cls = 'crm-em_negociacao';
          
          etapa = `<div class="crm-tag ${{cls}}">${{lbl}}</div>`;
-         if (crm.notas) etapa += `<div style="font-size:0.65rem;color:#8494b0;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${{crm.notas.replace(/"/g, '&quot;')}}">${{crm.notas}}</div>`;
+         if (crm.notas) etapa += `<div style="font-size:0.68rem;color:#64748b;max-width:250px;line-height:1.3;margin-top:4px;white-space:normal;word-break:break-word;">${{crm.notas}}</div>`;
       }} else {{
          etapa = l.etapa === 'Not contacted'
           ? `<span class="tag-nc">Não contatado</span>`
