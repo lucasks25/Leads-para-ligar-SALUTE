@@ -5,7 +5,7 @@ import glob
 from datetime import datetime
 
 PASTA_CURSOS = "Leads_Separados/Por_Curso"
-SAIDA = "dashboard_leads.html"
+SAIDA = "index.html"
 
 cursos_cor = {
     "Sem Curso": "#ef4444",
