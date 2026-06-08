@@ -810,9 +810,6 @@ function renderizar() {{
   renderPaginacao(total);
 }}
 
-  renderPaginacao(total);
-}}
-
 function renderPaginacao(total) {{
   const totalPags = Math.ceil(total / POR_PAG);
   const div = document.getElementById('paginacao');
