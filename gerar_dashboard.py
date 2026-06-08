@@ -466,6 +466,10 @@ for mes_ano, qtd in sorted(meses_lista, reverse=True):
         HTML += f'      <option value="{mes_ano}">{label}</option>\n'
 
 HTML += f"""    </select>
+    <select id="ordemData" onchange="aplicarFiltros()">
+      <option value="desc">Mais novos primeiro</option>
+      <option value="asc">Mais antigos primeiro</option>
+    </select>
     <div style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;margin-right:8px;">
       <span style="font-size:0.8rem;color:var(--text-3);font-weight:500;">De</span>
       <input type="date" id="dataInicio" onchange="aplicarFiltros()" style="border:1.5px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;color:var(--text);font-family:inherit;">
@@ -713,6 +717,7 @@ function limparFiltros() {{
   document.getElementById('busca').value = '';
   document.getElementById('filtroCurso').value = '';
   document.getElementById('filtroMes').value = '';
+  document.getElementById('ordemData').value = 'desc';
   document.getElementById('dataInicio').value = '';
   document.getElementById('dataFim').value = '';
   aplicarFiltros();
@@ -735,6 +740,17 @@ function aplicarFiltros() {{
       if (!txt.includes(busca)) return false;
     }}
     return true;
+  }});
+
+  const ordem = document.getElementById('ordemData').value;
+  leadsFiltrados.sort((a, b) => {{
+    const d1 = a.data_iso || '';
+    const d2 = b.data_iso || '';
+    if (ordem === 'asc') {{
+      return d1 < d2 ? -1 : (d1 > d2 ? 1 : 0);
+    }} else {{
+      return d1 > d2 ? -1 : (d1 < d2 ? 1 : 0);
+    }}
   }});
 
   paginaAtual = 1;
