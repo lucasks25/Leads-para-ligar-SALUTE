@@ -1,0 +1,15 @@
+# Dados pessoais — nunca versionar
+*.csv
+*.xlsx
+*.xls
+Leads_Separados/
+
+# Sistema
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Claude internal
+.claude-flow/
